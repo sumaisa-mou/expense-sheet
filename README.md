@@ -85,6 +85,28 @@ npm run dev
 Values are sent with Google's `USER_ENTERED` mode, so dates, numbers and
 formulas are interpreted exactly as if you had typed them into the sheet.
 
+## Field types
+
+Columns are still read from row 1, but recognised column names get a better
+control than a plain text box. Matching is case-insensitive and ignores
+punctuation, so `Paid By`, `paid_by` and `PAID BY` all behave the same.
+
+| Column name contains | Control | Notes |
+| --- | --- | --- |
+| `date`, `day`, `when` | Date picker | Prefilled with today |
+| `person`, `paid by`, `who`, `member`, `spender`, `payer` | Dropdown | Options: **Mou**, **Sunny** |
+| `category`, `kind` | Text | |
+| `description`, `details`, `note`, `item`, `purpose` | Multi-line text | |
+| `amount`, `price`, `cost`, `total`, `spend`, `taka`, `bdt` | Number | Accepts decimals |
+| anything else | Text | |
+
+All of this lives in [`lib/field-types.ts`](lib/field-types.ts). To change the
+dropdown names, edit the `PEOPLE` array. To turn Category into a dropdown too,
+change its rule to `{ type: "select", options: ["Food", "Transport", ...] }`.
+
+Columns that match nothing still get a text input, so a sheet with completely
+different headers keeps working.
+
 ## Project layout
 
 ```
@@ -99,6 +121,7 @@ components/
   SheetPicker.tsx                  link input and tab dropdown
   EntryForm.tsx                    generated form
 lib/
+  field-types.ts                   column name -> input type mapping
   auth.ts                          Auth.js config, refresh, email allowlist
   token.ts                         server-side access-token read + refresh
   sheets.ts                        Sheets client, A1 quoting, error messages
