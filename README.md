@@ -28,8 +28,16 @@ encrypted session cookie and is read only inside API routes
 2. **APIs & Services → Library →** enable **Google Sheets API**.
 3. **APIs & Services → OAuth consent screen →** choose **External**, fill in the
    required fields, and add your own Google account under **Test users**.
-   Leaving the app in **Testing** mode is fine — it avoids Google's
-   verification review, and only listed test users can sign in.
+   Newer consoles show this as **Google Auth Platform**, split into
+   **Branding**, **Audience** and **Clients** tabs — test users live under
+   **Audience**.
+
+   Then **publish the app** (Audience tab → **Publish app**). This matters:
+   while publishing status is **Testing**, Google expires refresh tokens after
+   7 days, so you would be signed out roughly weekly. Publishing stops that.
+   You will see an "unverified app" warning at sign-in — click **Advanced → Go
+   to app**. Going through Google's verification review is only needed to
+   remove that warning or to support more than 100 users.
 4. **APIs & Services → Credentials → Create credentials → OAuth client ID →
    Web application.** Add these authorized redirect URIs:
 
@@ -50,9 +58,14 @@ Copy `.env.example` to `.env.local` and fill it in:
 | `AUTH_URL` | `http://localhost:3000` locally, your real URL in production |
 | `ALLOWED_EMAILS` | Comma-separated allowlist of Google accounts that may sign in |
 
-`ALLOWED_EMAILS` matters: OAuth on its own would let *any* Google account into
-a public deployment. Anyone not on the list is refused after Google sign-in.
-Leave it empty only if you are relying on the Testing-mode test-user list.
+`AUTH_GOOGLE_ID` and `AUTH_GOOGLE_SECRET` come from step 1. The rest you set
+yourself — generate a **different** `AUTH_SECRET` for production than the one
+you use locally.
+
+`ALLOWED_EMAILS` matters, and it matters more once you publish the app: at
+that point Google's test-user list no longer gates anything, so *any* Google
+account could reach your deployed URL. Anyone not on the allowlist is refused
+straight after Google sign-in. Set it.
 
 ### 3. Run it
 
