@@ -61,7 +61,7 @@ export default async function Home() {
         </p>
       ) : null}
 
-      <SheetApp />
+      <SheetApp sheetUrl={process.env.SHEET_URL ?? ""} />
     </div>
   );
 }

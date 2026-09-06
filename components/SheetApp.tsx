@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import EntryForm from "@/components/EntryForm";
-import SheetPicker, { type SheetMeta } from "@/components/SheetPicker";
+import type { SheetMeta } from "@/components/SheetPicker";
+// SheetPicker is disabled — the sheet to write to now comes from the
+// SHEET_URL env var, so there is no manual "paste a link" step. The
+// component is kept in place in case a manual picker is needed again.
+// import SheetPicker from "@/components/SheetPicker";
 import { fetchJson } from "@/lib/client";
 
 const STORAGE_KEY = "expense-sheet:target";
@@ -29,7 +33,12 @@ function writeStoredTarget(target: StoredTarget) {
   }
 }
 
-export default function SheetApp() {
+type Props = {
+  /** Spreadsheet link/ID from the SHEET_URL env var. Empty when unset. */
+  sheetUrl: string;
+};
+
+export default function SheetApp({ sheetUrl }: Props) {
   const [meta, setMeta] = useState<SheetMeta | null>(null);
   const [tab, setTab] = useState("");
   const [headers, setHeaders] = useState<string[] | null>(null);
@@ -85,17 +94,19 @@ export default function SheetApp() {
     [loadHeaders],
   );
 
-  // Reconnect to the last used sheet on load, so the common case is one tap.
-  // localStorage is unreadable during SSR, so this has to happen after mount;
-  // the guard makes it run exactly once.
+  // Auto-connect to the sheet configured via SHEET_URL — no manual picker
+  // step. localStorage is unreadable during SSR, so this has to happen after
+  // mount; the guard makes it run exactly once. The remembered tab (if any)
+  // is still honored, in case a sheet has more than one tab in use.
   const restored = useRef(false);
   useEffect(() => {
     if (restored.current) return;
     restored.current = true;
+    if (!sheetUrl) return;
     const stored = readStoredTarget();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- reading an external store on mount is what an effect is for
-    if (stored) void connect(stored.id, stored.tab);
-  }, [connect]);
+    void connect(sheetUrl, stored?.tab);
+  }, [connect, sheetUrl]);
 
   useEffect(() => {
     if (!notice) return;
@@ -103,26 +114,29 @@ export default function SheetApp() {
     return () => clearTimeout(timer);
   }, [notice]);
 
-  function handleTabChange(nextTab: string) {
-    if (!meta) return;
-    setTab(nextTab);
-    setNotice(null);
-    writeStoredTarget({ id: meta.spreadsheetId, tab: nextTab });
-    void loadHeaders(meta.spreadsheetId, nextTab);
-  }
-
-  function handleReset() {
-    try {
-      window.localStorage.removeItem(STORAGE_KEY);
-    } catch {
-      // Ignore — the in-memory reset below is what matters.
-    }
-    setMeta(null);
-    setTab("");
-    setHeaders(null);
-    setError(null);
-    setNotice(null);
-  }
+  // Disabled along with SheetPicker above — these only exist to support its
+  // "Change" link and tab dropdown.
+  //
+  // function handleTabChange(nextTab: string) {
+  //   if (!meta) return;
+  //   setTab(nextTab);
+  //   setNotice(null);
+  //   writeStoredTarget({ id: meta.spreadsheetId, tab: nextTab });
+  //   void loadHeaders(meta.spreadsheetId, nextTab);
+  // }
+  //
+  // function handleReset() {
+  //   try {
+  //     window.localStorage.removeItem(STORAGE_KEY);
+  //   } catch {
+  //     // Ignore — the in-memory reset below is what matters.
+  //   }
+  //   setMeta(null);
+  //   setTab("");
+  //   setHeaders(null);
+  //   setError(null);
+  //   setNotice(null);
+  // }
 
   async function handleSubmit(values: Record<string, string>) {
     if (!meta || !headers) return false;
@@ -152,14 +166,25 @@ export default function SheetApp() {
 
   return (
     <main className="flex-1 pb-10">
-      <SheetPicker
+      {/* <SheetPicker
         meta={meta}
         tab={tab}
         connecting={connecting}
         onConnect={(input) => void connect(input)}
         onTabChange={handleTabChange}
         onReset={handleReset}
-      />
+      /> */}
+
+      {connecting ? (
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">Connecting…</p>
+      ) : null}
+
+      {!sheetUrl ? (
+        <p className="rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+          No sheet configured. Set SHEET_URL in the environment and restart
+          the server.
+        </p>
+      ) : null}
 
       {error ? (
         <p className="mt-4 rounded-lg border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200">

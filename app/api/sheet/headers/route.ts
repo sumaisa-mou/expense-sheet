@@ -23,7 +23,15 @@ export async function GET(req: NextRequest) {
     });
 
     const row = data.values?.[0] ?? [];
-    const headers = row.map((cell) => String(cell ?? "").trim());
+    let headers = row.map((cell) => String(cell ?? "").trim());
+
+    // SHEET_FIELD_LIMIT caps the form to the first N columns, so trailing
+    // summary/pivot columns (monthly totals, per-person breakdowns, etc.)
+    // never show up as fields.
+    const fieldLimit = Number(process.env.SHEET_FIELD_LIMIT);
+    if (Number.isFinite(fieldLimit) && fieldLimit > 0) {
+      headers = headers.slice(0, fieldLimit);
+    }
 
     // Trailing empties are just unused columns; drop them so the form does not
     // render a tail of nameless inputs.
