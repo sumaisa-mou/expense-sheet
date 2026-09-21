@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import EntryForm from "@/components/EntryForm";
+import RecentTransactions from "@/components/RecentTransactions";
 import type { SheetMeta } from "@/components/SheetPicker";
 // SheetPicker is disabled — the sheet to write to now comes from the
 // SHEET_URL env var, so there is no manual "paste a link" step. The
 // component is kept in place in case a manual picker is needed again.
 // import SheetPicker from "@/components/SheetPicker";
 import { fetchJson } from "@/lib/client";
+import type { Transaction } from "@/lib/helpers/transactions";
 
 const STORAGE_KEY = "expense-sheet:target";
 
@@ -42,9 +44,11 @@ export default function SheetApp({ sheetUrl }: Props) {
   const [meta, setMeta] = useState<SheetMeta | null>(null);
   const [tab, setTab] = useState("");
   const [headers, setHeaders] = useState<string[] | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
 
   const [connecting, setConnecting] = useState(false);
   const [loadingHeaders, setLoadingHeaders] = useState(false);
+  const [loadingTransactions, setLoadingTransactions] = useState(false);
   const [submitting, setSubmitting] = useState(false);
 
   const [error, setError] = useState<string | null>(null);
@@ -67,6 +71,22 @@ export default function SheetApp({ sheetUrl }: Props) {
     }
   }, []);
 
+  const loadTransactions = useCallback(async (id: string, tabName: string) => {
+    setLoadingTransactions(true);
+    try {
+      const query = `id=${encodeURIComponent(id)}&tab=${encodeURIComponent(tabName)}`;
+      const data = await fetchJson<{ transactions: Transaction[] }>(
+        `/api/sheet/transactions?${query}`,
+      );
+      setTransactions(data.transactions);
+    } catch {
+      // The form's own error banner already covers the connect/headers path;
+      // a failed transactions fetch just leaves the list empty.
+    } finally {
+      setLoadingTransactions(false);
+    }
+  }, []);
+
   const connect = useCallback(
     async (input: string, preferredTab?: string) => {
       setConnecting(true);
@@ -85,13 +105,14 @@ export default function SheetApp({ sheetUrl }: Props) {
         setTab(nextTab);
         writeStoredTarget({ id: data.spreadsheetId, tab: nextTab });
         await loadHeaders(data.spreadsheetId, nextTab);
+        void loadTransactions(data.spreadsheetId, nextTab);
       } catch (err) {
         setError((err as Error).message);
       } finally {
         setConnecting(false);
       }
     },
-    [loadHeaders],
+    [loadHeaders, loadTransactions],
   );
 
   // Auto-connect to the sheet configured via SHEET_URL — no manual picker
@@ -155,6 +176,7 @@ export default function SheetApp({ sheetUrl }: Props) {
         }),
       });
       setNotice(data.row ? `Added to row ${data.row}.` : "Row added.");
+      void loadTransactions(meta.spreadsheetId, tab);
       return true;
     } catch (err) {
       setError((err as Error).message);
@@ -198,8 +220,10 @@ export default function SheetApp({ sheetUrl }: Props) {
         </p>
       ) : null}
 
+      <div className="mt-4 grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+      <div>
       {loadingHeaders ? (
-        <p className="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+        <p className="text-sm text-zinc-500 dark:text-zinc-400">
           Reading columns…
         </p>
       ) : null}
@@ -212,6 +236,16 @@ export default function SheetApp({ sheetUrl }: Props) {
           onSubmit={handleSubmit}
         />
       ) : null}
+      </div>
+
+      {meta ? (
+        <RecentTransactions
+          transactions={transactions}
+          loading={loadingTransactions}
+          onRefresh={() => void loadTransactions(meta.spreadsheetId, tab)}
+        />
+      ) : null}
+      </div>
     </main>
   );
 }

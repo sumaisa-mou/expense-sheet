@@ -36,7 +36,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col p-4 sm:p-6">
+    <div className="mx-auto flex min-h-dvh w-full max-w-6xl flex-col p-4 sm:p-6">
       <header className="mb-6 flex items-center justify-between gap-4">
         <h1 className="text-lg font-semibold">Expense Sheet</h1>
         <div className="flex items-center gap-3">

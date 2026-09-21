@@ -20,27 +20,34 @@ export type FieldSpec = {
 /** Options for the person dropdown. */
 export const PEOPLE = ["Mou", "Sunny"];
 
-const RULES: Array<{ match: string[]; spec: FieldSpec }> = [
+export type FieldRole = "date" | "person" | "category" | "remarks" | "amount";
+
+const RULES: Array<{ match: string[]; role: FieldRole; spec: FieldSpec }> = [
   {
     match: ["date", "day", "when"],
+    role: "date",
     spec: { type: "date" },
   },
   {
     match: ["person", "paid by", "paidby", "who", "member", "spender", "payer"],
+    role: "person",
     spec: { type: "select", options: PEOPLE },
   },
   {
     // Free text today. To make it a dropdown, change this to
     // { type: "select", options: ["Food", "Transport", ...] }.
     match: ["category", "kind"],
+    role: "category",
     spec: { type: "text" },
   },
   {
     match: ["description", "details", "note", "notes", "item", "purpose"],
+    role: "remarks",
     spec: { type: "textarea" },
   },
   {
     match: ["amount", "price", "cost", "total", "spend", "spent", "taka", "bdt"],
+    role: "amount",
     spec: { type: "number" },
   },
 ];
@@ -54,9 +61,9 @@ function normalize(header: string): string {
     .trim();
 }
 
-export function specForHeader(header: string): FieldSpec {
+function matchRule(header: string) {
   const normalized = normalize(header);
-  if (!normalized) return { type: "text" };
+  if (!normalized) return null;
 
   const words = normalized.split(" ");
 
@@ -67,11 +74,20 @@ export function specForHeader(header: string): FieldSpec {
       const hit = keyword.includes(" ")
         ? normalized.includes(keyword)
         : words.includes(keyword);
-      if (hit) return rule.spec;
+      if (hit) return rule;
     }
   }
 
-  return { type: "text" };
+  return null;
+}
+
+export function specForHeader(header: string): FieldSpec {
+  return matchRule(header)?.spec ?? { type: "text" };
+}
+
+/** Which real-world role a header plays (e.g. "Paid By" -> "person"), or null if unrecognised. */
+export function roleForHeader(header: string): FieldRole | null {
+  return matchRule(header)?.role ?? null;
 }
 
 /** Today as YYYY-MM-DD in the browser's local timezone. */
