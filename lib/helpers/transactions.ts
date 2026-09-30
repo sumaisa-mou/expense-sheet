@@ -31,6 +31,7 @@ export function parseAmount(raw: string | undefined): number {
 
 /** Tolerant date parse: handles "YYYY-MM-DD" and "DD-MM-YYYY" / "DD/MM/YYYY". */
 export function parseDateString(value: string): Date | null {
+  if (!value) return null;
   const iso = value.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (iso) {
     const [, y, m, d] = iso;
@@ -44,6 +45,94 @@ export function parseDateString(value: string): Date | null {
   }
 
   return null;
+}
+
+/** Returns "DD-MM-YYYY" (e.g. "20-09-2026") */
+export function formatDisplayDate(value: string): string {
+  const date = parseDateString(value);
+  if (!date) return value;
+  const d = String(date.getDate()).padStart(2, "0");
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const y = date.getFullYear();
+  return `${d}-${m}-${y}`;
+}
+
+/** Returns "D MMM" (e.g. "20 Sep") */
+export function formatDayMonth(value: string): string {
+  const date = parseDateString(value);
+  if (!date) return value;
+  const day = date.getDate();
+  const months = [
+    "Jan",
+    "Feb",
+    "Mar",
+    "Apr",
+    "May",
+    "Jun",
+    "Jul",
+    "Aug",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dec",
+  ];
+  return `${day} ${months[date.getMonth()]}`;
+}
+
+/** Returns "YYYY-MM" (e.g. "2026-09") */
+export function getMonthYearKey(date: Date): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  return `${y}-${m}`;
+}
+
+/** Returns month label (e.g. "September 2026") */
+export function getMonthLabel(yearMonthKey: string): string {
+  const [yearStr, monthStr] = yearMonthKey.split("-");
+  const year = Number(yearStr);
+  const monthIdx = Number(monthStr) - 1;
+  const months = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+  return `${months[monthIdx] ?? "Unknown"} ${year}`;
+}
+
+/** Extracts all unique year-months present in transactions, defaulting to current month */
+export function getAvailableMonths(
+  transactions: Transaction[],
+): Array<{ key: string; label: string }> {
+  const monthMap = new Map<string, string>();
+
+  // Always include current month
+  const now = new Date();
+  const currentKey = getMonthYearKey(now);
+  monthMap.set(currentKey, getMonthLabel(currentKey));
+
+  for (const t of transactions) {
+    const parsed = parseDateString(t.date);
+    if (parsed) {
+      const key = getMonthYearKey(parsed);
+      if (!monthMap.has(key)) {
+        monthMap.set(key, getMonthLabel(key));
+      }
+    }
+  }
+
+  // Sort newest year-month first
+  return Array.from(monthMap.entries())
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .map(([key, label]) => ({ key, label }));
 }
 
 /** One data row (+ its 1-based sheet row number) -> a typed Transaction. */

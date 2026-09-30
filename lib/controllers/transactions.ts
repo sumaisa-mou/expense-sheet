@@ -45,8 +45,10 @@ export async function getRecentTransactions(
     ),
   );
 
+  const filtered = days > 0 ? withinLastDays(transactions, days) : transactions;
+
   return {
     headers,
-    transactions: sortByDateDesc(withinLastDays(transactions, days)),
+    transactions: sortByDateDesc(filtered),
   };
 }

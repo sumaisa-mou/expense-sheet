@@ -11,13 +11,13 @@ export async function GET(req: NextRequest) {
   const rawId = req.nextUrl.searchParams.get("id") ?? "";
   const tab = req.nextUrl.searchParams.get("tab") ?? "";
   const daysParam = req.nextUrl.searchParams.get("days");
-  const days = daysParam ? Number(daysParam) : 7;
+  const days = daysParam && daysParam !== "all" ? Number(daysParam) : 0;
 
   return withSheets(req, async (sheets) => {
     const spreadsheetId = parseSpreadsheetId(rawId);
     if (!spreadsheetId) return jsonError(400, "Missing or invalid spreadsheet ID.");
     if (!tab) return jsonError(400, "Missing tab name.");
-    if (!Number.isFinite(days) || days <= 0) return jsonError(400, "Invalid days value.");
+    if (days < 0 || !Number.isFinite(days)) return jsonError(400, "Invalid days value.");
 
     const result = await getRecentTransactions(sheets, spreadsheetId, tab, days);
     return NextResponse.json(result);
