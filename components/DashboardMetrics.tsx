@@ -216,7 +216,7 @@ export default function DashboardMetrics({
           <div className="relative overflow-hidden rounded-xl border border-zinc-200/90 bg-zinc-50/80 p-3.5 dark:border-zinc-800 dark:bg-zinc-800/50">
             <div className="flex items-center justify-between">
               <span className="text-xs font-medium text-zinc-600 dark:text-zinc-400">
-                Total Spent
+                Total Spent (7 Days)
               </span>
               <span className="inline-block h-2 w-2 rounded-full bg-zinc-900 dark:bg-zinc-200" />
             </div>

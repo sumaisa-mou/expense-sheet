@@ -1,5 +1,7 @@
 import { signOut } from "@/lib/auth";
 import AppNav from "@/components/AppNav";
+import OtherToggle from "@/components/OtherToggle";
+import { canUseOther } from "@/lib/other";
 
 type Props = {
   email: string;
@@ -9,6 +11,9 @@ type Props = {
 };
 
 export default function AppShell({ email, error, children }: Props) {
+  // Decided on the server: other accounts get no toggle and no link at all.
+  const otherOwner = canUseOther(email);
+
   async function handleSignOut() {
     "use server";
     await signOut({ redirectTo: "/" });
@@ -50,10 +55,14 @@ export default function AppShell({ email, error, children }: Props) {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-600 sm:flex dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
-            <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
-            <span>{email}</span>
-          </div>
+          {otherOwner ? (
+            <OtherToggle email={email} />
+          ) : (
+            <div className="hidden items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 py-1.5 text-xs text-zinc-600 sm:flex dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
+              <span className="h-1.5 w-1.5 rounded-full bg-zinc-400" />
+              <span>{email}</span>
+            </div>
+          )}
 
           <form action={handleSignOut}>
             <button
@@ -66,7 +75,9 @@ export default function AppShell({ email, error, children }: Props) {
         </div>
       </header>
 
-      <AppNav />
+      <AppNav
+        hiddenLink={otherOwner ? { href: "/other", label: "Other" } : undefined}
+      />
 
       {error ? (
         <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">

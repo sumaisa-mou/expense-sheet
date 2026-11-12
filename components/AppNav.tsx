@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useOtherRevealed } from "@/components/OtherToggle";
 
 const LINKS = [
   { href: "/", label: "Expenses" },
@@ -9,11 +10,19 @@ const LINKS = [
   { href: "/sanchaypatro", label: "Sanchaypatro" },
 ];
 
-export default function AppNav() {
+type NavLink = { href: string; label: string };
+
+/**
+ * `hiddenLink` is sent by the server only to the account allowed to use it,
+ * and is shown only after that user reveals it with the navbar email toggle.
+ */
+export default function AppNav({ hiddenLink }: { hiddenLink?: NavLink }) {
   const pathname = usePathname();
+  const revealed = useOtherRevealed();
+  const links = hiddenLink && revealed ? [...LINKS, hiddenLink] : LINKS;
   return (
     <nav className="mb-5 flex gap-1 overflow-x-auto rounded-xl bg-zinc-100 p-1 dark:bg-zinc-900" aria-label="Sections">
-      {LINKS.map(({ href, label }) => {
+      {links.map(({ href, label }) => {
         const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
         return (
           <Link

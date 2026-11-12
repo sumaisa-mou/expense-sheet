@@ -1,10 +1,20 @@
 import { NextResponse, type NextRequest } from "next/server";
 import type { sheets_v4 } from "googleapis";
+import { auth } from "@/lib/auth";
+import { canUseOther } from "@/lib/other";
 import { AuthRequiredError, getGoogleAccessToken } from "@/lib/token";
 import { describeGoogleError, sheetsClient } from "@/lib/sheets";
 
 export function jsonError(status: number, message: string) {
   return NextResponse.json({ error: message }, { status });
+}
+
+/** Null when the signed-in account is the Other owner, else the refusal. */
+export async function refuseNonOther(): Promise<NextResponse | null> {
+  const session = await auth();
+  if (!session?.user) return jsonError(401, "Not signed in.");
+  if (!canUseOther(session.user.email)) return jsonError(403, "Not allowed.");
+  return null;
 }
 
 /**
